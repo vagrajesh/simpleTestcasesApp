@@ -23,6 +23,9 @@ export function createLocalProvider(config = {}) {
   const model = (config.model && config.model.trim()) ? config.model.trim() : null;
   // appendPath defaults to true; set to false when endpoint already includes the full path
   const appendPath = config.appendPath !== false;
+  // mergePromptsToUser: combine system+user into a single user message
+  // for models that ignore the system role (default: false = standard behaviour)
+  const mergePromptsToUser = config.mergePromptsToUser === true;
 
   if (!endpoint) {
     throw new Error('endpoint is required for the local LLM provider');
@@ -37,8 +40,16 @@ export function createLocalProvider(config = {}) {
 
     async generate({ systemPrompt, userPrompt }) {
       const logKey = apiKey ? ` key=${maskKey(apiKey)}` : '';
-      console.log(`[local] POST ${url} model=${model ?? '(server default)'}${logKey}`);
+      console.log(`[local] POST ${url} model=${model ?? '(server default)'} mergePromptsToUser=${mergePromptsToUser}${logKey}`);
       const start = Date.now();
+
+      // Build messages array based on merge strategy
+      const messages = mergePromptsToUser
+        ? [{ role: 'user', content: `${systemPrompt}\n\n${userPrompt}` }]
+        : [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ];
 
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -54,10 +65,7 @@ export function createLocalProvider(config = {}) {
           body: JSON.stringify({
             // omit model entirely when null so the server uses its own default
             ...(model ? { model } : {}),
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt },
-            ],
+            messages,
             temperature: 0.2,
             stream: false,
           }),

@@ -42,6 +42,7 @@ export default function LLMSelector({ onChange }) {
   const [endpoint, setEndpoint] = useState('http://localhost:11434');
   const [apiKey, setApiKey] = useState('');
   const [appendPath, setAppendPath] = useState(true);
+  const [mergePromptsToUser, setMergePromptsToUser] = useState(false);
 
   // Restore from localStorage on mount
   useEffect(() => {
@@ -54,6 +55,7 @@ export default function LLMSelector({ onChange }) {
     if (saved.endpoint) setEndpoint(saved.endpoint);
     if (saved.apiKey) setApiKey(saved.apiKey);
     if (typeof saved.appendPath === 'boolean') setAppendPath(saved.appendPath);
+    if (typeof saved.mergePromptsToUser === 'boolean') setMergePromptsToUser(saved.mergePromptsToUser);
   }, []);
 
   // Notify parent + persist on every change
@@ -62,12 +64,12 @@ export default function LLMSelector({ onChange }) {
     const config = {
       provider,
       ...(effectiveModel ? { model: effectiveModel } : {}),
-      ...(provider === 'local' && { endpoint, appendPath }),
+      ...(provider === 'local' && { endpoint, appendPath, mergePromptsToUser }),
       ...(provider === 'local' && apiKey && { apiKey }),
     };
-    saveToStorage({ provider, selectedModel, customModel, useCustomModel, endpoint, apiKey, appendPath });
+    saveToStorage({ provider, selectedModel, customModel, useCustomModel, endpoint, apiKey, appendPath, mergePromptsToUser });
     onChange(config);
-  }, [provider, selectedModel, customModel, useCustomModel, endpoint, apiKey, appendPath]);
+  }, [provider, selectedModel, customModel, useCustomModel, endpoint, apiKey, appendPath, mergePromptsToUser]);
 
   const switchProvider = (p) => {
     setProvider(p);
@@ -152,6 +154,20 @@ export default function LLMSelector({ onChange }) {
               />
               <span className="text-xs text-gray-400">
                 Append <code className="text-gray-300">/v1/chat/completions</code> to endpoint
+              </span>
+            </label>
+          </div>
+          <div className="space-y-1">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={mergePromptsToUser}
+                onChange={(e) => setMergePromptsToUser(e.target.checked)}
+                className="accent-amber-500"
+              />
+              <span className="text-xs text-gray-400">
+                Merge instructions into user message
+                <span className="ml-1 text-gray-600">(for models that ignore system role)</span>
               </span>
             </label>
           </div>

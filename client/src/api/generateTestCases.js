@@ -19,7 +19,8 @@ export async function generateTestCases({ userStory, categories, llmConfig }) {
         // only include these when relevant
         ...(llmConfig.provider === 'local' && {
           endpoint: llmConfig.endpoint,
-          appendPath: llmConfig.appendPath !== false, // default true
+          appendPath: llmConfig.appendPath !== false,
+          mergePromptsToUser: llmConfig.mergePromptsToUser === true,
           ...(llmConfig.apiKey ? { apiKey: llmConfig.apiKey } : {}),
         }),
       },
