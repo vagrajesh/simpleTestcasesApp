@@ -1,0 +1,343 @@
+{
+  "info": {
+    "name": "Test Case Generator API",
+    "description": "All endpoints for the Test Case Generator backend. Base URL: http://localhost:3001",
+    "_postman_id": "tcg-api-collection-v1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001",
+      "type": "string"
+    },
+    {
+      "key": "groqApiKey",
+      "value": "YOUR_GROQ_API_KEY",
+      "type": "string"
+    },
+    {
+      "key": "openaiApiKey",
+      "value": "YOUR_OPENAI_API_KEY",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            },
+            "description": "Returns server status and current timestamp. Use this to confirm the server is running before making generation requests."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"ok\",\n  \"timestamp\": \"2026-07-15T10:00:00.000Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Generate Test Cases",
+      "item": [
+        {
+          "name": "Generate — Groq (all categories)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userStory\": \"As a customer, I want to reset my password so that I can regain access to my account.\",\n  \"options\": {\n    \"categories\": [\"positive\", \"negative\", \"edge\", \"e2e\"]\n  },\n  \"llm\": {\n    \"provider\": \"groq\",\n    \"model\": \"llama-3.3-70b-versatile\",\n    \"apiKey\": \"{{groqApiKey}}\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/generate-test-cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "generate-test-cases"]
+            },
+            "description": "Generate test cases using Groq cloud LLM. All four categories requested. The apiKey field overrides the server-side GROQ_API_KEY env var — omit it to use the server env key."
+          },
+          "response": [
+            {
+              "name": "200 Success",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"testCases\": [\n    {\n      \"id\": \"TC-POS-01\",\n      \"category\": \"positive\",\n      \"title\": \"Successful password reset with valid email\",\n      \"preconditions\": \"User has a registered account with email test@example.com\",\n      \"steps\": [\n        \"Navigate to the login page\",\n        \"Click 'Forgot Password'\",\n        \"Enter test@example.com\",\n        \"Click 'Send Reset Link'\",\n        \"Open the reset email and click the link\",\n        \"Enter and confirm a new password\",\n        \"Submit the form\"\n      ],\n      \"expectedResult\": \"Password is updated and user is redirected to the login page with a success message\",\n      \"priority\": \"High\"\n    }\n  ],\n  \"provider_used\": \"groq\",\n  \"model_used\": \"llama-3.3-70b-versatile\",\n  \"latency_ms\": 2340\n}"
+            }
+          ]
+        },
+        {
+          "name": "Generate — Groq (positive + negative only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userStory\": \"As a customer, I want to reset my password so that I can regain access to my account.\",\n  \"options\": {\n    \"categories\": [\"positive\", \"negative\"]\n  },\n  \"llm\": {\n    \"provider\": \"groq\",\n    \"model\": \"llama-3.3-70b-versatile\",\n    \"apiKey\": \"{{groqApiKey}}\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/generate-test-cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "generate-test-cases"]
+            },
+            "description": "Generate only Positive and Negative test cases using Groq."
+          },
+          "response": []
+        },
+        {
+          "name": "Generate — OpenAI (all categories)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userStory\": \"As a customer, I want to reset my password so that I can regain access to my account.\",\n  \"options\": {\n    \"categories\": [\"positive\", \"negative\", \"edge\", \"e2e\"]\n  },\n  \"llm\": {\n    \"provider\": \"openai\",\n    \"model\": \"gpt-4o-mini\",\n    \"apiKey\": \"{{openaiApiKey}}\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/generate-test-cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "generate-test-cases"]
+            },
+            "description": "Generate test cases using OpenAI gpt-4o-mini. The apiKey field overrides the server-side OPENAI_API_KEY env var."
+          },
+          "response": []
+        },
+        {
+          "name": "Generate — OpenAI (org/custom endpoint)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userStory\": \"As a customer, I want to reset my password so that I can regain access to my account.\",\n  \"options\": {\n    \"categories\": [\"positive\", \"negative\", \"edge\", \"e2e\"]\n  },\n  \"llm\": {\n    \"provider\": \"local\",\n    \"model\": \"gpt-4o-mini\",\n    \"endpoint\": \"https://your-org-endpoint.openai.azure.com/openai/deployments/your-deployment\",\n    \"apiKey\": \"YOUR_ORG_API_KEY\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/generate-test-cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "generate-test-cases"]
+            },
+            "description": "Use the 'local' provider with an org/Azure OpenAI-compatible endpoint. Replace endpoint and apiKey with your org's values. The local provider appends /v1/chat/completions to the endpoint."
+          },
+          "response": []
+        },
+        {
+          "name": "Generate — Local LLM / Ollama",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userStory\": \"As a customer, I want to reset my password so that I can regain access to my account.\",\n  \"options\": {\n    \"categories\": [\"positive\", \"negative\", \"edge\", \"e2e\"]\n  },\n  \"llm\": {\n    \"provider\": \"local\",\n    \"model\": \"llama3.1:8b\",\n    \"endpoint\": \"http://localhost:11434\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/generate-test-cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "generate-test-cases"]
+            },
+            "description": "Generate using a local Ollama instance. Requires ALLOW_LOCAL_ENDPOINTS=true in server/.env. No apiKey needed for Ollama."
+          },
+          "response": []
+        },
+        {
+          "name": "Generate — Local LLM / LM Studio",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userStory\": \"As a customer, I want to reset my password so that I can regain access to my account.\",\n  \"options\": {\n    \"categories\": [\"positive\", \"negative\", \"edge\", \"e2e\"]\n  },\n  \"llm\": {\n    \"provider\": \"local\",\n    \"model\": \"mistral:7b\",\n    \"endpoint\": \"http://localhost:1234\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/generate-test-cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "generate-test-cases"]
+            },
+            "description": "Generate using LM Studio local server. Requires ALLOW_LOCAL_ENDPOINTS=true in server/.env."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Validation Errors",
+      "item": [
+        {
+          "name": "400 — User story too short",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userStory\": \"Too short\",\n  \"llm\": {\n    \"provider\": \"groq\",\n    \"model\": \"llama-3.3-70b-versatile\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/generate-test-cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "generate-test-cases"]
+            },
+            "description": "Expects 400: userStory must be at least 20 characters."
+          },
+          "response": [
+            {
+              "name": "400 Bad Request",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"error\": \"userStory must be at least 20 characters\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "400 — Missing provider",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userStory\": \"As a customer, I want to reset my password so that I can regain access to my account.\",\n  \"llm\": {}\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/generate-test-cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "generate-test-cases"]
+            },
+            "description": "Expects 400: llm.provider is required."
+          },
+          "response": [
+            {
+              "name": "400 Bad Request",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"error\": \"llm.provider must be one of: groq, openai, local\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "400 — Local provider missing endpoint",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userStory\": \"As a customer, I want to reset my password so that I can regain access to my account.\",\n  \"llm\": {\n    \"provider\": \"local\",\n    \"model\": \"llama3.1:8b\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/generate-test-cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "generate-test-cases"]
+            },
+            "description": "Expects 400: endpoint is required when provider is local."
+          },
+          "response": [
+            {
+              "name": "400 Bad Request",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"error\": \"llm.endpoint is required when provider is \\\"local\\\"\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "400 — SSRF guard (private IP)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userStory\": \"As a customer, I want to reset my password so that I can regain access to my account.\",\n  \"llm\": {\n    \"provider\": \"local\",\n    \"model\": \"llama3.1:8b\",\n    \"endpoint\": \"http://169.254.169.254/metadata\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/generate-test-cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "generate-test-cases"]
+            },
+            "description": "Expects 400: SSRF guard blocks private/link-local IP ranges. The AWS metadata endpoint is used here as a test."
+          },
+          "response": [
+            {
+              "name": "400 Bad Request",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"error\": \"llm.endpoint resolves to a private/loopback address. Set ALLOW_LOCAL_ENDPOINTS=true in server .env to allow local LLM endpoints during development.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "400 — Invalid category",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userStory\": \"As a customer, I want to reset my password so that I can regain access to my account.\",\n  \"options\": {\n    \"categories\": [\"positive\", \"regression\"]\n  },\n  \"llm\": {\n    \"provider\": \"groq\",\n    \"model\": \"llama-3.3-70b-versatile\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/generate-test-cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "generate-test-cases"]
+            },
+            "description": "Expects 400: 'regression' is not an allowed category. Allowed: positive, negative, edge, e2e."
+          },
+          "response": [
+            {
+              "name": "400 Bad Request",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"error\": \"Invalid categories: [regression]. Allowed: positive, negative, edge, e2e\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

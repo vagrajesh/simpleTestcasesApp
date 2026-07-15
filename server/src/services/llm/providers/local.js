@@ -19,14 +19,17 @@ function maskKey(key) {
  */
 export function createLocalProvider(config = {}) {
   const { endpoint, apiKey } = config;
-  const model = (config.model && config.model.trim()) ? config.model.trim() : DEFAULT_MODEL;
+  // Empty string means "let the server decide" — omit model from request body
+  const model = (config.model && config.model.trim()) ? config.model.trim() : null;
+  // appendPath defaults to true; set to false when endpoint already includes the full path
+  const appendPath = config.appendPath !== false;
 
   if (!endpoint) {
     throw new Error('endpoint is required for the local LLM provider');
   }
 
-  // Normalise: strip trailing slash, append /v1/chat/completions
-  const url = `${endpoint.replace(/\/+$/, '')}/v1/chat/completions`;
+  const base = endpoint.replace(/\/+$/, '');
+  const url = appendPath ? `${base}/v1/chat/completions` : base;
 
   return {
     provider: 'local',
@@ -34,7 +37,7 @@ export function createLocalProvider(config = {}) {
 
     async generate({ systemPrompt, userPrompt }) {
       const logKey = apiKey ? ` key=${maskKey(apiKey)}` : '';
-      console.log(`[local] POST ${url} model=${model}${logKey}`);
+      console.log(`[local] POST ${url} model=${model ?? '(server default)'}${logKey}`);
       const start = Date.now();
 
       const controller = new AbortController();
@@ -49,7 +52,8 @@ export function createLocalProvider(config = {}) {
           method: 'POST',
           headers,
           body: JSON.stringify({
-            model,
+            // omit model entirely when null so the server uses its own default
+            ...(model ? { model } : {}),
             messages: [
               { role: 'system', content: systemPrompt },
               { role: 'user', content: userPrompt },
@@ -73,9 +77,10 @@ export function createLocalProvider(config = {}) {
       const data = await response.json();
       const text = data.choices?.[0]?.message?.content ?? '';
       const latency_ms = Date.now() - start;
+      const resolvedModel = data.model ?? model ?? 'local';
 
-      console.log(`[local] done in ${latency_ms}ms, output length=${text.length}`);
-      return { text, model, latency_ms };
+      console.log(`[local] done in ${latency_ms}ms, model=${resolvedModel}, output length=${text.length}`);
+      return { text, model: resolvedModel, latency_ms };
     },
   };
 }

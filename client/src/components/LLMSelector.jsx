@@ -10,6 +10,7 @@ const GROQ_MODELS = [
 ];
 const OPENAI_MODELS = ['gpt-5.4-mini'];
 const LOCAL_MODELS = ['llama3.1:8b', 'llama3:8b', 'mistral:7b', 'codellama:7b', 'phi3:mini'];
+const LOCAL_MODEL_DEFAULT = ''; // empty string = let the server decide
 
 function loadFromStorage() {
   try {
@@ -40,6 +41,7 @@ export default function LLMSelector({ onChange }) {
   const [useCustomModel, setUseCustomModel] = useState(false);
   const [endpoint, setEndpoint] = useState('http://localhost:11434');
   const [apiKey, setApiKey] = useState('');
+  const [appendPath, setAppendPath] = useState(true);
 
   // Restore from localStorage on mount
   useEffect(() => {
@@ -51,6 +53,7 @@ export default function LLMSelector({ onChange }) {
     if (typeof saved.useCustomModel === 'boolean') setUseCustomModel(saved.useCustomModel);
     if (saved.endpoint) setEndpoint(saved.endpoint);
     if (saved.apiKey) setApiKey(saved.apiKey);
+    if (typeof saved.appendPath === 'boolean') setAppendPath(saved.appendPath);
   }, []);
 
   // Notify parent + persist on every change
@@ -59,19 +62,19 @@ export default function LLMSelector({ onChange }) {
     const config = {
       provider,
       model: effectiveModel,
-      ...(provider === 'local' && { endpoint }),
+      ...(provider === 'local' && { endpoint, appendPath }),
       ...(provider === 'local' && apiKey && { apiKey }),
     };
-    saveToStorage({ provider, selectedModel, customModel, useCustomModel, endpoint, apiKey });
+    saveToStorage({ provider, selectedModel, customModel, useCustomModel, endpoint, apiKey, appendPath });
     onChange(config);
-  }, [provider, selectedModel, customModel, useCustomModel, endpoint, apiKey]);
+  }, [provider, selectedModel, customModel, useCustomModel, endpoint, apiKey, appendPath]);
 
   const switchProvider = (p) => {
     setProvider(p);
     setUseCustomModel(false);
     if (p === 'groq') setSelectedModel(GROQ_MODELS[0]);
     else if (p === 'openai') setSelectedModel(OPENAI_MODELS[0]);
-    else setSelectedModel(LOCAL_MODELS[0]);
+    else setSelectedModel(LOCAL_MODEL_DEFAULT);
   };
 
   const modelList = provider === 'groq' ? GROQ_MODELS : provider === 'openai' ? OPENAI_MODELS : LOCAL_MODELS;
@@ -119,6 +122,9 @@ export default function LLMSelector({ onChange }) {
             onChange={(e) => setSelectedModel(e.target.value)}
             className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           >
+            {provider === 'local' && (
+              <option value="">Default (server-configured)</option>
+            )}
             {modelList.map((m) => (
               <option key={m} value={m}>{m}</option>
             ))}
@@ -136,6 +142,19 @@ export default function LLMSelector({ onChange }) {
       {/* Local LLM extras */}
       {provider === 'local' && (
         <>
+          <div className="space-y-1">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={appendPath}
+                onChange={(e) => setAppendPath(e.target.checked)}
+                className="accent-indigo-500"
+              />
+              <span className="text-xs text-gray-400">
+                Append <code className="text-gray-300">/v1/chat/completions</code> to endpoint
+              </span>
+            </label>
+          </div>
           <div className="space-y-1">
             <label className="block text-xs text-gray-400">Endpoint URL</label>
             <input
