@@ -102,6 +102,7 @@ router.post('/generate-test-cases', async (req, res) => {
   }
 
   // 4. Parse + validate JSON from LLM
+  console.log('[generate] RAW LLM OUTPUT >>>\n', llmResult.text, '\n<<<');
   let testCases;
   try {
     testCases = parseAndValidateLLMResponse(llmResult.text);
