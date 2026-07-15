@@ -61,7 +61,7 @@ export default function LLMSelector({ onChange }) {
     const effectiveModel = useCustomModel ? customModel.trim() : selectedModel;
     const config = {
       provider,
-      model: effectiveModel,
+      ...(effectiveModel ? { model: effectiveModel } : {}),
       ...(provider === 'local' && { endpoint, appendPath }),
       ...(provider === 'local' && apiKey && { apiKey }),
     };
