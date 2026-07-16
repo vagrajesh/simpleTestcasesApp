@@ -23,10 +23,18 @@ function buildUserPrompt(userStory, categories) {
  */
 function parseAndValidateLLMResponse(raw) {
   // Strip ```json ... ``` or ``` ... ``` wrappers
-  const stripped = raw
+  let stripped = raw
     .replace(/^```(?:json)?\s*/i, '')
     .replace(/\s*```\s*$/i, '')
     .trim();
+
+  // Reasoning models emit a chain-of-thought (which may itself contain a
+  // draft JSON block) before the real answer, closed by a </think> tag.
+  // Discard everything up to the last such tag so only the final answer remains.
+  const thinkEnd = stripped.lastIndexOf('</think>');
+  if (thinkEnd !== -1) {
+    stripped = stripped.slice(thinkEnd + '</think>'.length).trim();
+  }
 
   // Extract the JSON object by finding the first { and last }
   // This tolerates preamble/trailing prose from non-compliant models
