@@ -23,10 +23,23 @@ function buildUserPrompt(userStory, categories) {
  */
 function parseAndValidateLLMResponse(raw) {
   // Strip ```json ... ``` or ``` ... ``` wrappers
-  const cleaned = raw
+  const stripped = raw
     .replace(/^```(?:json)?\s*/i, '')
     .replace(/\s*```\s*$/i, '')
     .trim();
+
+  // Extract the JSON object by finding the first { and last }
+  // This tolerates preamble/trailing prose from non-compliant models
+  const jsonStart = stripped.indexOf('{');
+  const jsonEnd   = stripped.lastIndexOf('}');
+
+  if (jsonStart === -1 || jsonEnd === -1 || jsonEnd <= jsonStart) {
+    throw new Error(
+      `LLM response contains no JSON object. First 400 chars: ${stripped.slice(0, 400)}`
+    );
+  }
+
+  const cleaned = stripped.slice(jsonStart, jsonEnd + 1);
 
   let parsed;
   try {
@@ -34,7 +47,7 @@ function parseAndValidateLLMResponse(raw) {
   } catch (err) {
     throw new Error(
       `LLM returned invalid JSON — ${err.message}. ` +
-      `First 400 chars of output: ${cleaned.slice(0, 400)}`
+      `First 400 chars of output: ${stripped.slice(0, 400)}`
     );
   }
 
