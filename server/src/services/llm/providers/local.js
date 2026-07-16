@@ -51,6 +51,16 @@ export function createLocalProvider(config = {}) {
             { role: 'user', content: userPrompt },
           ];
 
+      const requestBody = {
+        ...(model ? { model } : {}),
+        messages,
+        temperature: 0.2,
+        stream: false,
+      };
+      console.log('[local] OUTBOUND REQUEST BODY >>>');
+      console.log(JSON.stringify(requestBody, null, 2));
+      console.log('[local] <<<');
+
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
@@ -62,13 +72,7 @@ export function createLocalProvider(config = {}) {
         response = await fetch(url, {
           method: 'POST',
           headers,
-          body: JSON.stringify({
-            // omit model entirely when null so the server uses its own default
-            ...(model ? { model } : {}),
-            messages,
-            temperature: 0.2,
-            stream: false,
-          }),
+          body: JSON.stringify(requestBody),
           signal: controller.signal,
         });
       } finally {

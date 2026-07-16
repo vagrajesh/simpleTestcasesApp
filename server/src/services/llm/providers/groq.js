@@ -33,6 +33,18 @@ export function createGroqProvider(config = {}) {
 
     async generate({ systemPrompt, userPrompt }) {
       console.log(`[groq] model=${model} key=${maskKey(apiKey)}`);
+      const requestBody = {
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.2,
+        max_tokens: 4096,
+      };
+      console.log('[groq] OUTBOUND REQUEST BODY >>>');
+      console.log(JSON.stringify(requestBody, null, 2));
+      console.log('[groq] <<<');
       const start = Date.now();
 
       const controller = new AbortController();
@@ -46,15 +58,7 @@ export function createGroqProvider(config = {}) {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${apiKey}`,
           },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt },
-            ],
-            temperature: 0.2,
-            max_tokens: 4096,
-          }),
+          body: JSON.stringify(requestBody),
           signal: controller.signal,
         });
       } finally {
