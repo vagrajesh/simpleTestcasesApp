@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import generateRouter from './routes/generate.js';
+import configRouter from './routes/config.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -42,6 +43,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 // ── Routes ────────────────────────────────────────────
+app.use('/api', configRouter);
 app.use('/api', generateLimiter, generateRouter);
 
 // ── Global error handler ──────────────────────────────
