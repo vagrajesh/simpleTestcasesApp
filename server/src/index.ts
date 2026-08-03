@@ -1,12 +1,13 @@
 import 'dotenv/config';
-import express from 'express';
+import express, { type Request, type Response, type NextFunction } from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import generateRouter from './routes/generate.js';
 import configRouter from './routes/config.js';
+import servicenowRouter from './routes/servicenow.js';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT: number = Number(process.env.PORT) || 3001;
 
 // ── CORS ──────────────────────────────────────────────
 app.use(cors({
@@ -37,17 +38,27 @@ const generateLimiter = rateLimit({
   message: { success: false, error: 'Too many generation requests. Please wait a moment.' },
 });
 
+// Separate limit for ServiceNow calls (20 req/min per IP)
+const servicenowLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many ServiceNow requests. Please wait a moment.' },
+});
+
 // ── Health check ──────────────────────────────────────
-app.get('/api/health', (_req, res) => {
+app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // ── Routes ────────────────────────────────────────────
 app.use('/api', configRouter);
 app.use('/api', generateLimiter, generateRouter);
+app.use('/api', servicenowLimiter, servicenowRouter);
 
 // ── Global error handler ──────────────────────────────
-app.use((err, _req, res, _next) => {
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error('[server error]', err.message);
   res.status(500).json({ success: false, error: 'Internal server error' });
 });

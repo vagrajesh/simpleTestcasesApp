@@ -1,9 +1,22 @@
+import type { LLMConfig, LLMProviderInstance, LLMGenerateInput, LLMGenerateResult } from '@shared/types';
+
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const DEFAULT_MODEL = 'llama-3.3-70b-versatile';
 const TIMEOUT_MS = 30_000;
 
+interface GroqRequestBody {
+  model: string;
+  messages: Array<{ role: 'system' | 'user'; content: string }>;
+  temperature: number;
+  max_tokens: number;
+}
+
+interface GroqApiResponse {
+  choices?: Array<{ message?: { content?: string } }>;
+}
+
 /** Returns a masked representation of an API key safe for logging. */
-function maskKey(key) {
+function maskKey(key: string): string {
   if (!key) return '(none)';
   if (key.length < 8) return '***';
   return `${key.slice(0, 4)}***${key.slice(-4)}`;
@@ -12,12 +25,10 @@ function maskKey(key) {
 /**
  * Creates a Groq provider instance.
  *
- * @param {object} config
- * @param {string} [config.model]  - Model name; falls back to DEFAULT_MODEL.
- * @param {string} [config.apiKey] - Per-request key override; falls back to GROQ_API_KEY env.
- * @returns {{ provider: string, model: string, generate: Function }}
+ * @param config - Provider config; model and apiKey are optional overrides.
+ * @returns LLMProviderInstance configured for Groq.
  */
-export function createGroqProvider(config = {}) {
+export function createGroqProvider(config: Partial<LLMConfig> = {}): LLMProviderInstance {
   const apiKey = config.apiKey || process.env.GROQ_API_KEY;
   const model = (config.model && config.model.trim()) ? config.model.trim() : DEFAULT_MODEL;
 
@@ -31,9 +42,9 @@ export function createGroqProvider(config = {}) {
     provider: 'groq',
     model,
 
-    async generate({ systemPrompt, userPrompt }) {
+    async generate({ systemPrompt, userPrompt }: LLMGenerateInput): Promise<LLMGenerateResult> {
       console.log(`[groq] model=${model} key=${maskKey(apiKey)}`);
-      const requestBody = {
+      const requestBody: GroqRequestBody = {
         model,
         messages: [
           { role: 'system', content: systemPrompt },
@@ -50,7 +61,7 @@ export function createGroqProvider(config = {}) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-      let response;
+      let response: Response;
       try {
         response = await fetch(GROQ_API_URL, {
           method: 'POST',
@@ -70,7 +81,7 @@ export function createGroqProvider(config = {}) {
         throw new Error(`Groq API responded with ${response.status}: ${body.slice(0, 300)}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as GroqApiResponse;
       const text = data.choices?.[0]?.message?.content ?? '';
       const latency_ms = Date.now() - start;
 

@@ -1,20 +1,46 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import type { TestCaseCategory, LLMConfig } from '@shared/types';
 
-const ALL_CATEGORIES = [
+interface CategoryMeta {
+  id: TestCaseCategory;
+  label: string;
+  desc: string;
+}
+
+const ALL_CATEGORIES: CategoryMeta[] = [
   { id: 'positive', label: 'Positive', desc: 'Valid / happy-path flows' },
   { id: 'negative', label: 'Negative', desc: 'Invalid inputs, error handling' },
   { id: 'edge',     label: 'Edge',     desc: 'Boundary & unusual-but-valid' },
   { id: 'e2e',      label: 'E2E',      desc: 'Full end-to-end journeys' },
 ];
 
+interface GeneratePayload {
+  userStory: string;
+  categories: TestCaseCategory[];
+}
+
+interface Props {
+  loading: boolean;
+  llmConfig: LLMConfig | null;
+  onGenerate: (payload: GeneratePayload) => void;
+  prefillText?: string;
+}
+
 /**
  * User story textarea + category checkboxes + submit button.
+ *
+ * `prefillText`, when it changes to a non-empty value, overwrites the textarea —
+ * used by StoryPicker to populate the story pulled from ServiceNow.
  */
-export default function StoryInput({ loading, llmConfig, onGenerate }) {
-  const [userStory, setUserStory] = useState('');
-  const [categories, setCategories] = useState(['positive', 'negative', 'edge', 'e2e']);
+export default function StoryInput({ loading, llmConfig, onGenerate, prefillText }: Props) {
+  const [userStory, setUserStory] = useState<string>('');
+  const [categories, setCategories] = useState<TestCaseCategory[]>(['positive', 'negative', 'edge', 'e2e']);
 
-  const toggleCategory = (id) => {
+  useEffect(() => {
+    if (prefillText) setUserStory(prefillText);
+  }, [prefillText]);
+
+  const toggleCategory = (id: TestCaseCategory): void => {
     setCategories((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
     );
@@ -22,12 +48,12 @@ export default function StoryInput({ loading, llmConfig, onGenerate }) {
 
   const trimmed = userStory.trim();
   const tooShort = trimmed.length > 0 && trimmed.length < 20;
-  const isReady = trimmed.length >= 20 && categories.length > 0 && !loading && llmConfig;
+  const isReady = trimmed.length >= 20 && categories.length > 0 && !loading && llmConfig !== null;
 
   const providerLabel = llmConfig?.provider === 'local' ? 'Local LLM' : 'Groq';
   const modelLabel    = llmConfig?.model || '...';
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
     if (!isReady) return;
     onGenerate({ userStory: trimmed, categories });

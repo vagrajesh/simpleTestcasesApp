@@ -1,4 +1,9 @@
-export default function ErrorBanner({ error, onRetry }) {
+interface Props {
+  error: string;
+  onRetry?: () => void;
+}
+
+export default function ErrorBanner({ error, onRetry }: Props) {
   return (
     <div className="bg-red-950/60 border border-red-800 rounded-xl p-4 mb-4 space-y-3">
       <div className="flex items-start gap-2.5">

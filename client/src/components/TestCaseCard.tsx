@@ -1,21 +1,26 @@
 import { useState } from 'react';
+import type { TestCase, Priority, TestCaseCategory } from '@shared/types';
 import { copyToClipboard, formatTestCaseAsText } from '../utils/exportUtils';
 
-const PRIORITY_BADGE = {
+const PRIORITY_BADGE: Record<Priority, string> = {
   High:   'bg-red-900/50 text-red-300 border-red-700',
   Medium: 'bg-amber-900/50 text-amber-300 border-amber-700',
   Low:    'bg-green-900/50 text-green-300 border-green-700',
 };
 
-const CATEGORY_BADGE = {
+const CATEGORY_BADGE: Record<TestCaseCategory, string> = {
   positive: 'bg-emerald-900/30 text-emerald-400 border-emerald-800',
   negative: 'bg-red-900/30 text-red-400 border-red-800',
   edge:     'bg-yellow-900/30 text-yellow-400 border-yellow-800',
   e2e:      'bg-blue-900/30 text-blue-400 border-blue-800',
 };
 
-export default function TestCaseCard({ testCase }) {
-  const [copied, setCopied] = useState(false);
+interface Props {
+  testCase: TestCase;
+}
+
+export default function TestCaseCard({ testCase }: Props) {
+  const [copied, setCopied] = useState<boolean>(false);
 
   const handleCopy = async () => {
     await copyToClipboard(formatTestCaseAsText(testCase));

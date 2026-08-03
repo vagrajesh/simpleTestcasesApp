@@ -1,27 +1,39 @@
 import { useState, useEffect } from 'react';
+import type { LLMProvider, LLMConfig } from '@shared/types';
 
 const STORAGE_KEY = 'tcg_llm_config';
 
-const GROQ_MODELS = [
+const GROQ_MODELS: string[] = [
   'llama-3.3-70b-versatile',
   'llama-3.1-8b-instant',
   'mixtral-8x7b-32768',
   'gemma2-9b-it',
 ];
-const OPENAI_MODELS = ['gpt-5.4-mini'];
-const LOCAL_MODELS = ['llama3.1:8b', 'llama3:8b', 'mistral:7b', 'codellama:7b', 'phi3:mini'];
+const OPENAI_MODELS: string[] = ['gpt-5.4-mini'];
+const LOCAL_MODELS: string[]  = ['llama3.1:8b', 'llama3:8b', 'mistral:7b', 'codellama:7b', 'phi3:mini'];
 const LOCAL_MODEL_DEFAULT = ''; // empty string = let the server decide
 
-function loadFromStorage() {
+interface StoredConfig {
+  provider?: LLMProvider;
+  selectedModel?: string;
+  customModel?: string;
+  useCustomModel?: boolean;
+  endpoint?: string;
+  apiKey?: string;
+  appendPath?: boolean;
+  mergePromptsToUser?: boolean;
+}
+
+function loadFromStorage(): StoredConfig | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    return raw ? (JSON.parse(raw) as StoredConfig) : null;
   } catch {
     return null;
   }
 }
 
-function saveToStorage(data) {
+function saveToStorage(data: StoredConfig): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch {
@@ -29,20 +41,24 @@ function saveToStorage(data) {
   }
 }
 
+interface Props {
+  onChange: (config: LLMConfig) => void;
+}
+
 /**
  * LLM provider/model/endpoint selector.
  * Persists selection to localStorage under `tcg_llm_config`.
  * Calls `onChange(config)` whenever the effective config changes.
  */
-export default function LLMSelector({ onChange }) {
-  const [provider, setProvider] = useState('groq');
-  const [selectedModel, setSelectedModel] = useState('llama-3.3-70b-versatile');
-  const [customModel, setCustomModel] = useState('');
-  const [useCustomModel, setUseCustomModel] = useState(false);
-  const [endpoint, setEndpoint] = useState('http://localhost:11434');
-  const [apiKey, setApiKey] = useState('');
-  const [appendPath, setAppendPath] = useState(true);
-  const [mergePromptsToUser, setMergePromptsToUser] = useState(false);
+export default function LLMSelector({ onChange }: Props) {
+  const [provider, setProvider]                   = useState<LLMProvider>('groq');
+  const [selectedModel, setSelectedModel]         = useState<string>('llama-3.3-70b-versatile');
+  const [customModel, setCustomModel]             = useState<string>('');
+  const [useCustomModel, setUseCustomModel]       = useState<boolean>(false);
+  const [endpoint, setEndpoint]                   = useState<string>('http://localhost:11434');
+  const [apiKey, setApiKey]                       = useState<string>('');
+  const [appendPath, setAppendPath]               = useState<boolean>(true);
+  const [mergePromptsToUser, setMergePromptsToUser] = useState<boolean>(false);
 
   // Restore from localStorage on mount
   useEffect(() => {
@@ -61,7 +77,7 @@ export default function LLMSelector({ onChange }) {
   // Notify parent + persist on every change
   useEffect(() => {
     const effectiveModel = useCustomModel ? customModel.trim() : selectedModel;
-    const config = {
+    const config: LLMConfig = {
       provider,
       ...(effectiveModel ? { model: effectiveModel } : {}),
       ...(provider === 'local' && { endpoint, appendPath, mergePromptsToUser }),
@@ -71,7 +87,7 @@ export default function LLMSelector({ onChange }) {
     onChange(config);
   }, [provider, selectedModel, customModel, useCustomModel, endpoint, apiKey, appendPath, mergePromptsToUser]);
 
-  const switchProvider = (p) => {
+  const switchProvider = (p: LLMProvider): void => {
     setProvider(p);
     setUseCustomModel(false);
     if (p === 'groq') setSelectedModel(GROQ_MODELS[0]);
@@ -87,11 +103,11 @@ export default function LLMSelector({ onChange }) {
 
       {/* Provider toggle */}
       <div className="flex rounded-lg bg-gray-800 p-1 gap-1">
-        {[
-          { id: 'groq',  label: 'Groq' },
-          { id: 'openai', label: 'OpenAI' },
-          { id: 'local', label: 'Local LLM' },
-        ].map(({ id, label }) => (
+        {([
+          { id: 'groq'  as LLMProvider, label: 'Groq' },
+          { id: 'openai' as LLMProvider, label: 'OpenAI' },
+          { id: 'local' as LLMProvider, label: 'Local LLM' },
+        ]).map(({ id, label }) => (
           <button
             key={id}
             type="button"

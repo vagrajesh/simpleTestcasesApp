@@ -1,16 +1,48 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import type { LLMConfig, TestCaseCategory } from '@shared/types';
 import LLMSelector from './components/LLMSelector';
+import StoryPicker from './components/StoryPicker';
 import StoryInput from './components/StoryInput';
 import ResultsPanel from './components/ResultsPanel';
 import ErrorBanner from './components/ErrorBanner';
 import { useTestCaseGenerator } from './hooks/useTestCaseGenerator';
+import { fetchServiceNowConfig } from './api/servicenow';
+
+type StoryMode = 'manual' | 'servicenow';
+
+interface StoryRef {
+  sysId: string;
+  number: string;
+}
 
 export default function App() {
-  const [llmConfig, setLlmConfig] = useState(null);
+  const [llmConfig, setLlmConfig] = useState<LLMConfig | null>(null);
+  const [serviceNowConfigured, setServiceNowConfigured] = useState<boolean>(false);
+  const [selectedStory, setSelectedStory] = useState<StoryRef | null>(null);
+  const [storyPrefill, setStoryPrefill] = useState<string>('');
   const { loading, error, results, generate, retry } = useTestCaseGenerator();
 
+  // Check once on mount whether the backend has ServiceNow configured,
+  // so the picker only renders when it's actually usable.
+  useEffect(() => {
+    fetchServiceNowConfig()
+      .then((data) => setServiceNowConfigured(Boolean(data?.integrations?.serviceNowConfigured)))
+      .catch(() => setServiceNowConfigured(false));
+  }, []);
+
+  const handleSelectStory = useCallback((story: StoryRef, composedText: string) => {
+    setSelectedStory(story);
+    setStoryPrefill(composedText);
+  }, []);
+
+  const handleStoryModeChange = useCallback((mode: StoryMode) => {
+    // Switching back to manual entry means the text may now diverge from
+    // the originally-pulled story — don't keep offering to export to it.
+    if (mode === 'manual') setSelectedStory(null);
+  }, []);
+
   const handleGenerate = useCallback(
-    ({ userStory, categories }) => {
+    ({ userStory, categories }: { userStory: string; categories: TestCaseCategory[] }) => {
       if (!llmConfig) return;
       generate({ userStory, categories, llmConfig });
     },
@@ -41,10 +73,16 @@ export default function App() {
         {/* Left: config + input */}
         <div className="space-y-4">
           <LLMSelector onChange={setLlmConfig} />
+          <StoryPicker
+            enabled={serviceNowConfigured}
+            onSelectStory={handleSelectStory}
+            onModeChange={handleStoryModeChange}
+          />
           <StoryInput
             loading={loading}
             llmConfig={llmConfig}
             onGenerate={handleGenerate}
+            prefillText={storyPrefill}
           />
         </div>
 

@@ -1,12 +1,17 @@
-const API_BASE = import.meta.env.VITE_API_BASE || '';
+import type { LLMConfig, TestCaseCategory, GenerateResponse } from '@shared/types';
+
+const API_BASE: string = import.meta.env.VITE_API_BASE || '';
+
+interface GenerateParams {
+  userStory: string;
+  categories: TestCaseCategory[];
+  llmConfig: LLMConfig;
+}
 
 /**
  * Calls POST /api/generate-test-cases on the backend.
- *
- * @param {{ userStory: string, categories: string[], llmConfig: object }} params
- * @returns {Promise<object>} parsed JSON response
  */
-export async function generateTestCases({ userStory, categories, llmConfig }) {
+export async function generateTestCases({ userStory, categories, llmConfig }: GenerateParams): Promise<GenerateResponse> {
   const response = await fetch(`${API_BASE}/api/generate-test-cases`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -33,6 +38,6 @@ export async function generateTestCases({ userStory, categories, llmConfig }) {
     throw new Error(`Unexpected server error: HTTP ${response.status}`);
   }
 
-  const data = await response.json();
+  const data = await response.json() as GenerateResponse;
   return data;
 }

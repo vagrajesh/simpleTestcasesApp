@@ -7,7 +7,7 @@
  *  - All required fields must be present.
  *  - Two few-shot examples are inlined so models stay consistent across providers.
  */
-export const SYSTEM_PROMPT = `You are an expert QA engineer specialising in test case design.
+export const SYSTEM_PROMPT: string = `You are an expert QA engineer specialising in test case design.
 Your ONLY job is to generate structured test cases from a user story and return them as raw JSON.
 
 CRITICAL RULES:

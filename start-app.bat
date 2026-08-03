@@ -4,8 +4,8 @@ title Test Case Generator
 echo Starting Test Case Generator...
 echo.
 
-REM Start Express server in its own window
-start "TCG - Server (port 3001)" cmd /k "cd /d %~dp0server && echo [SERVER] Starting... && node --use-system-ca src/index.js"
+REM Start Express server in its own window (tsx runs TypeScript directly)
+start "TCG - Server (port 3001)" cmd /k "cd /d %~dp0server && echo [SERVER] Starting... && npm run dev"
 
 REM Give the server a moment to bind before the client starts
 timeout /t 2 /nobreak >nul

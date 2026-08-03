@@ -1,12 +1,23 @@
+import type { TestCase, TestCaseCategory, ResultsMeta } from '@shared/types';
 import TestCaseCard from './TestCaseCard';
 import { exportAsJSON, exportAsCSV } from '../utils/exportUtils';
 
-const CATEGORY_ORDER = ['positive', 'negative', 'edge', 'e2e'];
-const CATEGORY_LABEL = { positive: 'Positive', negative: 'Negative', edge: 'Edge', e2e: 'E2E' };
+const CATEGORY_ORDER: TestCaseCategory[] = ['positive', 'negative', 'edge', 'e2e'];
+const CATEGORY_LABEL: Record<TestCaseCategory, string> = {
+  positive: 'Positive',
+  negative: 'Negative',
+  edge: 'Edge',
+  e2e: 'E2E',
+};
 
-export default function ResultsPanel({ testCases, meta }) {
+interface Props {
+  testCases: TestCase[];
+  meta: ResultsMeta;
+}
+
+export default function ResultsPanel({ testCases, meta }: Props) {
   // Group by category in a fixed display order
-  const grouped = CATEGORY_ORDER.reduce((acc, cat) => {
+  const grouped = CATEGORY_ORDER.reduce<Record<string, TestCase[]>>((acc, cat) => {
     const cases = testCases.filter((tc) => tc.category === cat);
     if (cases.length > 0) acc[cat] = cases;
     return acc;
@@ -45,7 +56,7 @@ export default function ResultsPanel({ testCases, meta }) {
       {Object.entries(grouped).map(([cat, cases]) => (
         <section key={cat}>
           <div className="flex items-center gap-2 mb-3">
-            <h3 className="text-sm font-semibold text-gray-300">{CATEGORY_LABEL[cat]}</h3>
+            <h3 className="text-sm font-semibold text-gray-300">{CATEGORY_LABEL[cat as TestCaseCategory]}</h3>
             <span className="text-xs text-gray-500 bg-gray-800 px-1.5 py-0.5 rounded">
               {cases.length}
             </span>

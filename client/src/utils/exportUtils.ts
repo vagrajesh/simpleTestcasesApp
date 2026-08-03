@@ -1,7 +1,9 @@
+import type { TestCase } from '@shared/types';
+
 /**
  * Exports test cases as a downloadable JSON file.
  */
-export function exportAsJSON(testCases) {
+export function exportAsJSON(testCases: TestCase[]): void {
   const payload = JSON.stringify({ testCases }, null, 2);
   triggerDownload(new Blob([payload], { type: 'application/json' }), `test-cases-${timestamp()}.json`);
 }
@@ -10,7 +12,7 @@ export function exportAsJSON(testCases) {
  * Exports test cases as a downloadable CSV file.
  * Multi-step arrays are joined with " | ".
  */
-export function exportAsCSV(testCases) {
+export function exportAsCSV(testCases: TestCase[]): void {
   const headers = ['id', 'category', 'title', 'preconditions', 'steps', 'expectedResult', 'priority'];
   const rows = testCases.map((tc) =>
     [
@@ -31,7 +33,7 @@ export function exportAsCSV(testCases) {
 /**
  * Copies text to the system clipboard with a textarea fallback for older browsers.
  */
-export async function copyToClipboard(text) {
+export async function copyToClipboard(text: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(text);
   } catch {
@@ -49,7 +51,7 @@ export async function copyToClipboard(text) {
 /**
  * Formats a single test case as readable plain text for clipboard export.
  */
-export function formatTestCaseAsText(tc) {
+export function formatTestCaseAsText(tc: TestCase): string {
   return [
     `ID: ${tc.id}`,
     `Title: ${tc.title}`,
@@ -57,14 +59,14 @@ export function formatTestCaseAsText(tc) {
     `Priority: ${tc.priority}`,
     `Preconditions: ${tc.preconditions}`,
     `Steps:`,
-    ...(tc.steps || []).map((s, i) => `  ${i + 1}. ${s}`),
+    ...(tc.steps || []).map((s: string, i: number) => `  ${i + 1}. ${s}`),
     `Expected Result: ${tc.expectedResult}`,
   ].join('\n');
 }
 
 // ── Helpers ──────────────────────────────────────────────
 
-function csvEscape(value) {
+function csvEscape(value: unknown): string {
   const str = String(value ?? '');
   if (str.includes(',') || str.includes('"') || str.includes('\n')) {
     return `"${str.replace(/"/g, '""')}"`;
@@ -72,7 +74,7 @@ function csvEscape(value) {
   return str;
 }
 
-function triggerDownload(blob, filename) {
+function triggerDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -83,6 +85,6 @@ function triggerDownload(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
-function timestamp() {
+function timestamp(): string {
   return new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 }

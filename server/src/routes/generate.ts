@@ -1,14 +1,15 @@
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
+import type { TestCase, TestCaseCategory, LLMProvider, LLMConfig } from '@shared/types';
 import { validateGenerateRequest } from '../validators/generateRequest.js';
 import { getLLM } from '../services/llm/getLLM.js';
 import { SYSTEM_PROMPT } from '../services/llm/prompts/systemPrompt.js';
 
 const router = Router();
 
-const DEFAULT_CATEGORIES = ['positive', 'negative', 'edge', 'e2e'];
+const DEFAULT_CATEGORIES: TestCaseCategory[] = ['positive', 'negative', 'edge', 'e2e'];
 
 /** Builds the user-facing prompt injected alongside the system prompt. */
-function buildUserPrompt(userStory, categories) {
+function buildUserPrompt(userStory: string, categories: TestCaseCategory[]): string {
   return (
     `Generate test cases for the following user story:\n\n` +
     `"${userStory}"\n\n` +
@@ -18,10 +19,18 @@ function buildUserPrompt(userStory, categories) {
 }
 
 /**
+ * Raw shape returned by JSON.parse — all fields unknown until validated.
+ */
+interface RawLLMResponse {
+  testCases?: unknown[];
+}
+
+/**
  * Strips markdown code fences the model may wrap around JSON,
  * then parses and validates the structure.
+ * Returns a typed TestCase array or throws a descriptive error.
  */
-function parseAndValidateLLMResponse(raw) {
+function parseAndValidateLLMResponse(raw: string): TestCase[] {
   // Strip ```json ... ``` or ``` ... ``` wrappers
   let stripped = raw
     .replace(/^```(?:json)?\s*/i, '')
@@ -49,47 +58,59 @@ function parseAndValidateLLMResponse(raw) {
 
   const cleaned = stripped.slice(jsonStart, jsonEnd + 1);
 
-  let parsed;
+  let parsed: unknown;
   try {
     parsed = JSON.parse(cleaned);
   } catch (err) {
     throw new Error(
-      `LLM returned invalid JSON — ${err.message}. ` +
+      `LLM returned invalid JSON — ${(err as Error).message}. ` +
       `First 400 chars of output: ${stripped.slice(0, 400)}`
     );
   }
 
-  if (!Array.isArray(parsed.testCases)) {
+  const response = parsed as RawLLMResponse;
+
+  if (!Array.isArray(response.testCases)) {
     throw new Error('LLM response is missing the "testCases" array');
   }
 
-  const REQUIRED_FIELDS = ['id', 'category', 'title', 'preconditions', 'steps', 'expectedResult', 'priority'];
-  for (const [i, tc] of parsed.testCases.entries()) {
+  const REQUIRED_FIELDS: (keyof TestCase)[] = [
+    'id', 'category', 'title', 'preconditions', 'steps', 'expectedResult', 'priority',
+  ];
+
+  for (const [i, tc] of response.testCases.entries()) {
+    const testCase = tc as Record<string, unknown>;
     for (const field of REQUIRED_FIELDS) {
-      if (tc[field] === undefined || tc[field] === null) {
+      if (testCase[field] === undefined || testCase[field] === null) {
         throw new Error(`testCases[${i}] is missing required field "${field}"`);
       }
     }
-    if (!Array.isArray(tc.steps)) {
+    if (!Array.isArray(testCase['steps'])) {
       throw new Error(`testCases[${i}].steps must be an array`);
     }
   }
 
-  return parsed.testCases;
+  return response.testCases as TestCase[];
 }
 
 // ─────────────────────────────────────────────────────────
 // POST /api/generate-test-cases
 // ─────────────────────────────────────────────────────────
-router.post('/generate-test-cases', async (req, res) => {
+router.post('/generate-test-cases', async (req: Request, res: Response) => {
   // 1. Validate request body
   const errors = validateGenerateRequest(req.body);
   if (errors.length > 0) {
     return res.status(400).json({ success: false, error: errors.join('; ') });
   }
 
-  const { userStory, options = {}, llm: llmConfig = {} } = req.body;
-  const categories = options.categories ?? DEFAULT_CATEGORIES;
+  const body = req.body as {
+    userStory: string;
+    options?: { categories?: TestCaseCategory[] };
+    llm: Pick<LLMConfig, 'provider' | 'model' | 'apiKey' | 'endpoint'> & { provider: LLMProvider };
+  };
+
+  const { userStory, options = {}, llm: llmConfig } = body;
+  const categories: TestCaseCategory[] = options.categories ?? DEFAULT_CATEGORIES;
 
   // 2. Instantiate provider
   let provider;
@@ -100,7 +121,7 @@ router.post('/generate-test-cases', async (req, res) => {
       endpoint: llmConfig.endpoint,
     });
   } catch (err) {
-    return res.status(400).json({ success: false, error: err.message });
+    return res.status(400).json({ success: false, error: (err as Error).message });
   }
 
   // 3. Call LLM
@@ -109,7 +130,8 @@ router.post('/generate-test-cases', async (req, res) => {
   try {
     llmResult = await provider.generate({ systemPrompt: SYSTEM_PROMPT, userPrompt });
   } catch (err) {
-    const isTimeout = err.name === 'AbortError' || /abort/i.test(err.message);
+    const error = err as Error;
+    const isTimeout = error.name === 'AbortError' || /abort/i.test(error.message);
     if (isTimeout) {
       return res.status(504).json({
         success: false,
@@ -118,20 +140,20 @@ router.post('/generate-test-cases', async (req, res) => {
     }
     return res.status(502).json({
       success: false,
-      error: `LLM call failed: ${err.message}`,
+      error: `LLM call failed: ${error.message}`,
     });
   }
 
   // 4. Parse + validate JSON from LLM
   console.log('[generate] RAW LLM OUTPUT >>>\n', llmResult.text, '\n<<<');
-  let testCases;
+  let testCases: TestCase[];
   try {
     testCases = parseAndValidateLLMResponse(llmResult.text);
   } catch (err) {
-    console.error('[generate] parse error:', err.message);
+    console.error('[generate] parse error:', (err as Error).message);
     return res.status(502).json({
       success: false,
-      error: `Could not parse LLM response: ${err.message}`,
+      error: `Could not parse LLM response: ${(err as Error).message}`,
     });
   }
 
