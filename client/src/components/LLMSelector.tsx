@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
 import type { LLMProvider, LLMConfig } from '@shared/types';
 
+const API_BASE: string = (import.meta as { env: Record<string, string> }).env.VITE_API_BASE || '';
+
+interface EnvLocalLlm {
+  endpoint: string;
+  model: string;
+  apiKey: string;
+}
+
 const STORAGE_KEY = 'tcg_llm_config';
 
 const GROQ_MODELS: string[] = [
@@ -59,6 +67,27 @@ export default function LLMSelector({ onChange }: Props) {
   const [apiKey, setApiKey]                       = useState<string>('');
   const [appendPath, setAppendPath]               = useState<boolean>(true);
   const [mergePromptsToUser, setMergePromptsToUser] = useState<boolean>(false);
+  const [envLocalLlm, setEnvLocalLlm]               = useState<EnvLocalLlm | null>(null);
+
+  // Fetch server config (local LLM env values) on mount
+  useEffect(() => {
+    fetch(`${API_BASE}/api/config`)
+      .then((r) => r.json())
+      .then((data: { localLlm?: EnvLocalLlm }) => {
+        if (!data.localLlm) return;
+        setEnvLocalLlm(data.localLlm);
+        if (data.localLlm.endpoint) setEndpoint(data.localLlm.endpoint);
+        if (data.localLlm.model) {
+          if (LOCAL_MODELS.includes(data.localLlm.model)) {
+            setSelectedModel(data.localLlm.model);
+          } else {
+            setCustomModel(data.localLlm.model);
+            setUseCustomModel(true);
+          }
+        }
+      })
+      .catch(() => { /* ignore */ });
+  }, []); 
 
   // Restore from localStorage on mount
   useEffect(() => {
@@ -208,7 +237,7 @@ export default function LLMSelector({ onChange }: Props) {
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder="Leave blank if not required"
+              placeholder={envLocalLlm?.apiKey || 'Leave blank if not required'}
               autoComplete="off"
               className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
