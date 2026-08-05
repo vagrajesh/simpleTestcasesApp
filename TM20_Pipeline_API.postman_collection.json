@@ -1,0 +1,664 @@
+{
+  "info": {
+    "name": "TM2.0 Pipeline API",
+    "description": "Postman collection for testing pipeline orchestration, Human-in-Review, artifacts, and ServiceNow hardening endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "b6de8f4d-1799-4a66-b7f7-3adf9aeb5f8f"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "health"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Pipeline",
+      "item": [
+        {
+          "name": "Create Pipeline",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "if (json && json.pipeline && json.pipeline.pipelineId) {",
+                  "  pm.collectionVariables.set('pipelineId', json.pipeline.pipelineId);",
+                  "}",
+                  "",
+                  "pm.test('pipelineId is captured', function () {",
+                  "  pm.expect(pm.collectionVariables.get('pipelineId')).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"TM20 Pipeline Test\",\n  \"requirement\": {\n    \"userStory\": \"As a customer, I want to reset my password so that I can regain account access.\",\n    \"requirementId\": \"REQ-1001\",\n    \"userStoryId\": \"US-1001\",\n    \"feature\": \"Account Access\"\n  },\n  \"llm\": {\n    \"provider\": \"local\",\n    \"endpoint\": \"http://localhost:11434\"\n  },\n  \"options\": {\n    \"numTestCases\": 4,\n    \"categories\": [\"positive\", \"negative\", \"edge\", \"e2e\"]\n  },\n  \"review\": {\n    \"enabled\": true\n  },\n  \"execution\": {\n    \"autoStart\": false\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/pipelines",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "pipelines"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Pipeline Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/pipelines/{{pipelineId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "pipelines",
+                "{{pipelineId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Pipeline Passes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/pipelines/{{pipelineId}}/passes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "pipelines",
+                "{{pipelineId}}",
+                "passes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Execute Pipeline",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/pipelines/{{pipelineId}}/execute",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "pipelines",
+                "{{pipelineId}}",
+                "execute"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Resume Pipeline",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/pipelines/{{pipelineId}}/resume",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "pipelines",
+                "{{pipelineId}}",
+                "resume"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Retry Pass (Current passId variable)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/pipelines/{{pipelineId}}/passes/{{passId}}/retry",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "pipelines",
+                "{{pipelineId}}",
+                "passes",
+                "{{passId}}",
+                "retry"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Pass Detail (Current passId variable)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/pipelines/{{pipelineId}}/passes/{{passId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "pipelines",
+                "{{pipelineId}}",
+                "passes",
+                "{{passId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Run All (Sync)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "if (json && json.pipeline && json.pipeline.pipelineId) {",
+                  "  pm.collectionVariables.set('pipelineId', json.pipeline.pipelineId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"runMode\": \"sync\",\n  \"title\": \"TM20 RunAll Sync\",\n  \"requirement\": {\n    \"userStory\": \"As a support agent, I want to classify incident priority so that we can meet SLA targets.\",\n    \"requirementId\": \"REQ-2001\",\n    \"userStoryId\": \"US-2001\"\n  },\n  \"llm\": {\n    \"provider\": \"local\",\n    \"endpoint\": \"http://localhost:11434\"\n  },\n  \"options\": {\n    \"numTestCases\": 4,\n    \"categories\": [\"positive\", \"negative\", \"edge\", \"e2e\"]\n  },\n  \"review\": {\n    \"enabled\": false\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/pipelines/run-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "pipelines",
+                "run-all"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Run All (Async)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 202', function () {",
+                  "  pm.response.to.have.status(202);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "if (json && json.pipeline && json.pipeline.pipelineId) {",
+                  "  pm.collectionVariables.set('pipelineId', json.pipeline.pipelineId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"runMode\": \"async\",\n  \"title\": \"TM20 RunAll Async\",\n  \"requirement\": {\n    \"userStory\": \"As a manager, I want approval workflows so that high-risk changes are reviewed before release.\",\n    \"requirementId\": \"REQ-3001\",\n    \"userStoryId\": \"US-3001\"\n  },\n  \"llm\": {\n    \"provider\": \"local\",\n    \"endpoint\": \"http://localhost:11434\"\n  },\n  \"options\": {\n    \"numTestCases\": 4,\n    \"categories\": [\"positive\", \"negative\", \"edge\", \"e2e\"]\n  },\n  \"review\": {\n    \"enabled\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/pipelines/run-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "pipelines",
+                "run-all"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Review",
+      "item": [
+        {
+          "name": "Get Review Queue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "if (json && Array.isArray(json.reviews) && json.reviews.length > 0) {",
+                  "  pm.collectionVariables.set('reviewId', json.reviews[0].reviewId);",
+                  "  pm.collectionVariables.set('passId', json.reviews[0].passId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/reviews/queue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "reviews",
+                "queue"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Review Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/reviews/{{reviewId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "reviews",
+                "{{reviewId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Approve Review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"approve\",\n  \"reviewer\": \"qa.lead\",\n  \"comments\": \"Approved for next pass\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/reviews/{{reviewId}}/decision",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "reviews",
+                "{{reviewId}}",
+                "decision"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject Review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"reject\",\n  \"reviewer\": \"qa.lead\",\n  \"comments\": \"Rejecting for revision coverage gap in edge scenarios\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/reviews/{{reviewId}}/decision",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "reviews",
+                "{{reviewId}}",
+                "decision"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Review History (pipeline)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/pipelines/{{pipelineId}}/review-history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "pipelines",
+                "{{pipelineId}}",
+                "review-history"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Artifacts",
+      "item": [
+        {
+          "name": "List Artifacts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/pipelines/{{pipelineId}}/artifacts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "pipelines",
+                "{{pipelineId}}",
+                "artifacts"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get P6 Artifact (TM20 Test Cases)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/pipelines/{{pipelineId}}/artifacts/P6_TM20_TEST_CASES",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "pipelines",
+                "{{pipelineId}}",
+                "artifacts",
+                "P6_TM20_TEST_CASES"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get P9 Artifact (RTM)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/pipelines/{{pipelineId}}/artifacts/P9_RTM",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "pipelines",
+                "{{pipelineId}}",
+                "artifacts",
+                "P9_RTM"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get P10 Artifact (Coverage)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/pipelines/{{pipelineId}}/artifacts/P10_COVERAGE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "pipelines",
+                "{{pipelineId}}",
+                "artifacts",
+                "P10_COVERAGE"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get P11 Artifact (Self QA)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/pipelines/{{pipelineId}}/artifacts/P11_SELF_QA",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "pipelines",
+                "{{pipelineId}}",
+                "artifacts",
+                "P11_SELF_QA"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ServiceNow Hardening",
+      "item": [
+        {
+          "name": "Get ServiceNow Stories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/servicenow/stories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "servicenow",
+                "stories"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TM2.0 Preflight",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/servicenow/tm20/preflight",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "servicenow",
+                "tm20",
+                "preflight"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Validate Export Payload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pipelineId\": \"{{pipelineId}}\",\n  \"storySysId\": \"{{storySysId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/servicenow/tm20/validate-export-payload",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "servicenow",
+                "tm20",
+                "validate-export-payload"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Legacy Endpoint Smoke",
+      "item": [
+        {
+          "name": "Generate Test Cases (Legacy)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userStory\": \"As a user, I want to log in with email and password so that I can access my dashboard quickly.\",\n  \"options\": {\n    \"categories\": [\"positive\", \"negative\", \"edge\", \"e2e\"]\n  },\n  \"llm\": {\n    \"provider\": \"local\",\n    \"endpoint\": \"http://localhost:11434\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/generate-test-cases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "generate-test-cases"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001"
+    },
+    {
+      "key": "pipelineId",
+      "value": ""
+    },
+    {
+      "key": "reviewId",
+      "value": ""
+    },
+    {
+      "key": "passId",
+      "value": "P6_TM20_TEST_CASES"
+    },
+    {
+      "key": "storySysId",
+      "value": ""
+    }
+  ]
+}

@@ -7,9 +7,10 @@ import ResultsPanel from './components/ResultsPanel';
 import ErrorBanner from './components/ErrorBanner';
 import { useTestCaseGenerator } from './hooks/useTestCaseGenerator';
 import { fetchServiceNowConfig } from './api/servicenow';
+import PipelineView from './components/pipeline/PipelineView';
 
 type StoryMode = 'manual' | 'servicenow';
-type ActiveView = 'testcases' | 'settings';
+type ActiveView = 'testcases' | 'pipeline' | 'settings';
 
 interface StoryRef {
   sysId: string;
@@ -64,6 +65,16 @@ export default function App() {
         <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
             d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+        </svg>
+      ),
+    },
+    {
+      id: 'pipeline',
+      label: 'Pipeline Run',
+      icon: (
+        <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
       ),
     },
@@ -125,11 +136,13 @@ export default function App() {
         <header className="border-b border-gray-800 px-6 py-4 flex items-center justify-between gap-4">
           <div>
             <h1 className="text-base font-semibold leading-none">
-              {activeView === 'settings' ? 'Settings' : 'Test Cases'}
+              {activeView === 'settings' ? 'Settings' : activeView === 'pipeline' ? 'Pipeline Run' : 'Test Cases'}
             </h1>
             <p className="text-xs text-gray-500 mt-0.5">
               {activeView === 'settings'
                 ? 'Configure your LLM provider and connection settings'
+                : activeView === 'pipeline'
+                ? 'Run the 11-pass TM2.0 pipeline step-by-step, with review gates'
                 : 'Paste a user story and generate structured test cases'}
             </p>
           </div>
@@ -213,6 +226,11 @@ export default function App() {
                 )}
               </div>
             </div>
+          )}
+
+          {/* ── Pipeline Run view ── */}
+          {activeView === 'pipeline' && (
+            <PipelineView llmConfig={llmConfig} serviceNowConfigured={serviceNowConfigured} />
           )}
 
         </div>

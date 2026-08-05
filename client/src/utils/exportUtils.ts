@@ -1,4 +1,4 @@
-import type { TestCase } from '@shared/types';
+import type { PipelineBulkImportRow, TestCase } from '@shared/types';
 
 /**
  * Exports test cases as a downloadable JSON file.
@@ -62,6 +62,26 @@ export function formatTestCaseAsText(tc: TestCase): string {
     ...(tc.steps || []).map((s: string, i: number) => `  ${i + 1}. ${s}`),
     `Expected Result: ${tc.expectedResult}`,
   ].join('\n');
+}
+
+const BULK_IMPORT_HEADERS: (keyof PipelineBulkImportRow)[] = [
+  'test_case_number', 'test_case_name', 'type', 'test_suite', 'requirement_id', 'user_story_id',
+  'business_process', 'priority', 'risk_level', 'test_pyramid_layer', 'automation_candidate',
+  'automation_feasibility', 'automation_priority', 'recommended_automation_tool', 'preconditions',
+  'description', 'step_number', 'action', 'test_data', 'expected_result', 'expected_outcome',
+];
+
+/**
+ * Exports Pass 7's bulk-import rows as a ServiceNow TM2.0-ready CSV.
+ * One row per test step, matching the column order in prompt.md Phase 7.
+ */
+export function exportBulkImportAsCSV(rows: PipelineBulkImportRow[]): void {
+  const csv = [
+    BULK_IMPORT_HEADERS.join(','),
+    ...rows.map((row) => BULK_IMPORT_HEADERS.map((key) => csvEscape(row[key])).join(',')),
+  ].join('\n');
+
+  triggerDownload(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), `tm20-bulk-import-${timestamp()}.csv`);
 }
 
 // ── Helpers ──────────────────────────────────────────────

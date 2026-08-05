@@ -5,6 +5,9 @@ import rateLimit from 'express-rate-limit';
 import generateRouter from './routes/generate.js';
 import configRouter from './routes/config.js';
 import servicenowRouter from './routes/servicenow.js';
+import pipelineRouter from './routes/pipeline.js';
+import reviewRouter from './routes/review.js';
+import artifactsRouter from './routes/artifacts.js';
 
 const app = express();
 const PORT: number = Number(process.env.PORT) || 3001;
@@ -47,15 +50,34 @@ const servicenowLimiter = rateLimit({
   message: { success: false, error: 'Too many ServiceNow requests. Please wait a moment.' },
 });
 
+// Separate limit for pipeline orchestration calls (30 req/min per IP)
+const pipelineLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many pipeline requests. Please wait a moment.' },
+});
+
 // ── Health check ──────────────────────────────────────
 app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // ── Routes ────────────────────────────────────────────
+// Each limiter is scoped to its own path prefix, not the shared '/api' prefix —
+// app.use('/api', limiter, router) would otherwise run that limiter for every
+// request under /api (the router just calls next() on a non-match), letting the
+// smallest budget (generateLimiter, 10/min) throttle the entire API.
 app.use('/api', configRouter);
-app.use('/api', generateLimiter, generateRouter);
-app.use('/api', servicenowLimiter, servicenowRouter);
+app.use('/api/generate-test-cases', generateLimiter);
+app.use('/api', generateRouter);
+app.use('/api/servicenow', servicenowLimiter);
+app.use('/api', servicenowRouter);
+app.use('/api/v2', pipelineLimiter);
+app.use('/api', pipelineRouter);
+app.use('/api', reviewRouter);
+app.use('/api', artifactsRouter);
 
 // ── Global error handler ──────────────────────────────
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
