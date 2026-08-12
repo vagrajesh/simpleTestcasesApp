@@ -1,11 +1,12 @@
 import { useCallback, useState } from 'react';
-import type { LLMConfig, PipelinePassId } from '@shared/types';
+import type { LLMConfig, PipelineCreateRequest, PipelinePassId } from '@shared/types';
 import { usePipelineRun } from '../../hooks/usePipelineRun';
 import StoryPicker from '../StoryPicker';
 import CreatePipelineRun from './CreatePipelineRun';
 import RunDashboard from './RunDashboard';
 import ArtifactPanel from './ArtifactPanel';
 import ErrorBanner from '../ErrorBanner';
+import RequirementSummaryCard from './RequirementSummaryCard';
 
 type StoryMode = 'manual' | 'servicenow';
 
@@ -19,14 +20,23 @@ export default function PipelineView({ llmConfig, serviceNowConfigured }: Props)
     usePipelineRun();
   const [storyPrefill, setStoryPrefill] = useState<string>('');
   const [selectedPassId, setSelectedPassId] = useState<PipelinePassId | null>(null);
+  const [submittedRequirement, setSubmittedRequirement] = useState<PipelineCreateRequest | null>(null);
+  const [requirementExpanded, setRequirementExpanded] = useState<boolean>(false);
 
   const handleStoryModeChange = useCallback((_mode: StoryMode) => {}, []);
   const handleSelectStory = useCallback((_story: { sysId: string; number: string }, composedText: string) => {
     setStoryPrefill(composedText);
   }, []);
 
+  const handleStart = (request: PipelineCreateRequest): void => {
+    setSubmittedRequirement(request);
+    setRequirementExpanded(false);
+    start(request);
+  };
+
   const handleNewRun = (): void => {
     setSelectedPassId(null);
+    setSubmittedRequirement(null);
     reset();
   };
 
@@ -37,7 +47,7 @@ export default function PipelineView({ llmConfig, serviceNowConfigured }: Props)
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         <div className="space-y-4">
           <StoryPicker enabled={serviceNowConfigured} onSelectStory={handleSelectStory} onModeChange={handleStoryModeChange} />
-          <CreatePipelineRun loading={loading} llmConfig={llmConfig} onStart={start} prefillText={storyPrefill} />
+          <CreatePipelineRun loading={loading} llmConfig={llmConfig} onStart={handleStart} prefillText={storyPrefill} />
           {error && <ErrorBanner error={error} />}
         </div>
         <div className="flex flex-col items-center justify-center gap-2 h-64 border border-dashed border-gray-800 rounded-xl text-gray-600 text-sm">
@@ -62,6 +72,14 @@ export default function PipelineView({ llmConfig, serviceNowConfigured }: Props)
       </div>
 
       {error && <ErrorBanner error={error} />}
+
+      {submittedRequirement && (
+        <RequirementSummaryCard
+          request={submittedRequirement}
+          expanded={requirementExpanded}
+          onToggle={() => setRequirementExpanded((v) => !v)}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         <RunDashboard

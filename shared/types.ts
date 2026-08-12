@@ -211,6 +211,8 @@ export interface PipelinePassDetail extends PipelinePassSummary {
 export interface PipelineAnalysisRequirement {
   id: string;
   statement: string;
+  /** Traceability back to where this requirement came from, e.g. "Story", "AC1", "AC2 (derived)". */
+  source?: string;
 }
 
 export interface PipelineRequirementAnalysisArtifact {

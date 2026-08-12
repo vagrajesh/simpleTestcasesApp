@@ -13,7 +13,13 @@ import type {
   PipelineScenarioArtifact,
   PipelineSelfQAValidationArtifact,
   PipelineTM20TestCasesArtifact,
+  LLMProviderInstance,
 } from '@shared/types';
+import { extractJsonObject } from '../llm/parseJsonResponse.js';
+import {
+  REQUIREMENT_ANALYSIS_SYSTEM_PROMPT,
+  buildRequirementAnalysisUserPrompt,
+} from '../llm/prompts/requirementAnalysisPrompt.js';
 
 export interface PassExecutionResult {
   artifactType: string;
@@ -39,50 +45,64 @@ export interface PassExecutionDeps {
   coverage?: PipelineCoverageSummaryArtifact;
 }
 
-function extractActors(userStory: string): string[] {
-  const lower = userStory.toLowerCase();
-  if (lower.includes('admin')) return ['Admin'];
-  if (lower.includes('agent')) return ['Agent'];
-  if (lower.includes('customer')) return ['Customer'];
-  if (lower.includes('user')) return ['User'];
-  return ['User'];
+interface RawFunctionalRequirement {
+  id?: string;
+  statement?: string;
+  source?: string;
 }
 
-function extractActionAndBenefit(userStory: string): { action: string; benefit: string } {
-  const match = /i want to\s+(.*?)\s+so that\s+(.*?)[\.]?$/i.exec(userStory.trim());
-  if (!match) {
-    return {
-      action: 'perform the requested workflow',
-      benefit: 'the business objective is achieved',
-    };
+interface RawRequirementAnalysis {
+  requirementId?: string;
+  userStoryId?: string;
+  businessProcess?: string;
+  actors?: string[];
+  functionalRequirements?: RawFunctionalRequirement[];
+  assumptions?: string[];
+  missingInformation?: string[];
+}
+
+/**
+ * LLM-driven Pass 1. Reads the user story AND acceptance criteria (previously
+ * collected but unused by any pass) to derive granular, source-traced
+ * functional requirements instead of two generic template sentences.
+ */
+async function runRequirementAnalysisPass(
+  request: PipelineCreateRequest,
+  provider: LLMProviderInstance,
+): Promise<PipelineRequirementAnalysisArtifact> {
+  const userPrompt = buildRequirementAnalysisUserPrompt(request);
+  const llmResult = await provider.generate({
+    systemPrompt: REQUIREMENT_ANALYSIS_SYSTEM_PROMPT,
+    userPrompt,
+  });
+
+  const parsed = extractJsonObject(llmResult.text) as RawRequirementAnalysis;
+
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('LLM response for Requirement Analysis is not a JSON object');
   }
-  return {
-    action: match[1].trim(),
-    benefit: match[2].trim(),
-  };
-}
+  if (!Array.isArray(parsed.functionalRequirements) || parsed.functionalRequirements.length === 0) {
+    throw new Error('LLM response is missing a non-empty "functionalRequirements" array');
+  }
+  for (const [i, fr] of parsed.functionalRequirements.entries()) {
+    if (!fr || typeof fr.statement !== 'string' || !fr.statement.trim()) {
+      throw new Error(`functionalRequirements[${i}] is missing a "statement"`);
+    }
+  }
 
-function toRequirementAnalysis(request: PipelineCreateRequest): PipelineRequirementAnalysisArtifact {
-  const story = request.requirement.userStory.trim();
-  const { action, benefit } = extractActionAndBenefit(story);
-
   return {
-    requirementId: request.requirement.requirementId ?? 'REQ-AUTO-001',
-    userStoryId: request.requirement.userStoryId ?? 'US-AUTO-001',
-    businessProcess: request.requirement.feature ?? request.requirement.epic ?? 'Core Business Workflow',
-    actors: extractActors(story),
-    functionalRequirements: [
-      { id: 'FR-001', statement: `System allows actor to ${action}.` },
-      { id: 'FR-002', statement: `System ensures outcome where ${benefit}.` },
-    ],
-    assumptions: [
-      'The user has valid access to the application environment.',
-      'External dependencies are reachable during execution.',
-    ],
-    missingInformation: [
-      'Detailed non-functional performance thresholds are not provided.',
-      'Role-specific authorization matrix is not fully specified.',
-    ],
+    requirementId: parsed.requirementId || request.requirement.requirementId || 'REQ-AUTO-001',
+    userStoryId: parsed.userStoryId || request.requirement.userStoryId || 'US-AUTO-001',
+    businessProcess:
+      parsed.businessProcess || request.requirement.feature || request.requirement.epic || 'Core Business Workflow',
+    actors: Array.isArray(parsed.actors) && parsed.actors.length > 0 ? parsed.actors : ['User'],
+    functionalRequirements: parsed.functionalRequirements.map((fr, i) => ({
+      id: fr.id || `FR-${String(i + 1).padStart(2, '0')}`,
+      statement: fr.statement!.trim(),
+      ...(fr.source ? { source: fr.source } : {}),
+    })),
+    assumptions: Array.isArray(parsed.assumptions) ? parsed.assumptions : [],
+    missingInformation: Array.isArray(parsed.missingInformation) ? parsed.missingInformation : [],
   };
 }
 
@@ -444,13 +464,18 @@ function toSelfQA(
   };
 }
 
-export function executeCorePass(
+export async function executeCorePass(
   passId: PipelinePassId,
   request: PipelineCreateRequest,
   deps: PassExecutionDeps,
-): PassExecutionResult {
+  provider: LLMProviderInstance,
+): Promise<PassExecutionResult> {
   if (passId === 'P1_REQUIREMENT_ANALYSIS') {
-    return { artifactType: 'requirement-analysis', artifactVersion: '1.0.0', data: toRequirementAnalysis(request) };
+    return {
+      artifactType: 'requirement-analysis',
+      artifactVersion: '1.1.0',
+      data: await runRequirementAnalysisPass(request, provider),
+    };
   }
 
   if (passId === 'P2_RISK_ASSESSMENT') {

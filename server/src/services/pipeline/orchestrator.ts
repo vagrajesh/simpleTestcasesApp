@@ -32,6 +32,7 @@ import {
   toPipelineRunSummary,
 } from './store.js';
 import { executeCorePass, validateCorePassArtifact } from './passExecutors.js';
+import { getLLM } from '../llm/getLLM.js';
 
 const FULL_PIPELINE_PASSES: PipelinePassId[] = [
   'P1_REQUIREMENT_ANALYSIS',
@@ -376,6 +377,14 @@ export class PipelineOrchestrator {
       );
     }
 
+    // Built once per run (not per pass/attempt) — construction failures (e.g. a
+    // missing API key) should fail fast, before flipping status to 'running'.
+    const provider = getLLM(run.request.llm.provider, {
+      model: run.request.llm.model,
+      apiKey: run.request.llm.apiKey,
+      endpoint: run.request.llm.endpoint,
+    });
+
     run.status = 'running';
     run.updatedAt = new Date().toISOString();
     this.store.update(run);
@@ -412,7 +421,7 @@ export class PipelineOrchestrator {
             coverage: run.artifacts['P10_COVERAGE']?.data as PipelineCoverageSummaryArtifact | undefined,
           };
 
-          const result = executeCorePass(passId, run.request, deps);
+          const result = await executeCorePass(passId, run.request, deps, provider);
           const validation = validateCorePassArtifact(passId, result.data);
 
           if (!validation.valid) {
